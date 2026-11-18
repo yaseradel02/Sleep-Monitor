@@ -1,56 +1,83 @@
-# Sleep-Monitor
+# Sleep Monitor
 
-## Project Overview
-
-A low-cost AI-powered sleep monitoring system that uses **heart rate and movement data** to classify sleep into four stages: Wake, Light Sleep, Deep Sleep, and REM.
-
-This project is being developed as part of the **General Assembly Data Science Capstone**.
+**A low-cost, AI-assisted sleep monitoring prototype** built for the General Assembly Data Science Capstone. It estimates four sleep stages from wrist-worn heart-rate and movement data, and explores how affordable sensors can support a practical sleep-monitoring demonstration.
 
 ## Problem Statement
 
-Understanding sleep quality typically requires specialized equipment, such as polysomnography (PSG), which can be expensive and impractical for everyday monitoring.
-
-This project explores whether machine learning can estimate sleep stages using only heart rate and accelerometer measurements from affordable wearable sensors.
+Identifying sleep stages normally relies on polysomnography (PSG), which requires specialized equipment and is not practical for routine home use. This project investigates whether heart-rate and accelerometer measurements can provide useful estimates of **Wake, Light, Deep, and REM** sleep without EEG equipment at inference time.
 
 ## Impact
 
-The goal is to make sleep monitoring more affordable and accessible, allowing users to better understand their sleeping patterns without expensive equipment.
-
-The system is intended for personal sleep awareness, not medical diagnosis.
+A more accessible approach could help people explore their sleep patterns using inexpensive wearable hardware. This is an **educational, non-medical prototype**: its predictions are estimates and should not be used for diagnosis or treatment.
 
 ## Scope
 
-- **Target Audience:** Individuals interested in understanding their sleep patterns.
-- **Input:** Heart rate and accelerometer measurements.
-- **Output:** Four sleep stages — Wake, Light, Deep, and REM.
-- **Dataset:** BIDSleep (PhysioNet), containing 47 participants and 253 nights.
-- **Hardware (Planned):** Arduino Nano 33 IoT and MAX30102 heart rate sensor.
-- **Deliverables:** Trained ML model, evaluation results, and a low-cost hardware proof of concept.
+- **Audience:** People interested in personal sleep awareness and students exploring wearable AI.
+- **Inputs:** Heart-rate and accelerometer-derived measurements.
+- **Outputs:** Four sleep classes: Wake, Light (N1/N2), Deep (N3), and REM.
+- **Deliverables:** Processed dataset, exploratory analysis, model experiments, trained sleep-stage classifier, test evaluation, Arduino sensor firmware, and Android demonstration APK.
+- **Boundary:** Research and proof of concept, not a clinical sleep-study replacement.
 
-## Progress So Far
+## Dataset and Processing
 
-- Collected and processed **205,013 labeled 30-second epochs**.
-- Cleaned and synchronized heart rate, movement, and sleep stage labels.
-- Performed exploratory data analysis and feature engineering.
-- Split data by participant to prevent data leakage.
-- Trained Logistic Regression, Random Forest, and Neural Network baseline models.
-- Developed GRU models to learn patterns across consecutive sleep epochs.
-- Achieved approximately **57.94% validation accuracy and 0.5735 Macro F1** with a GRU experiment.
+The project uses [BIDSleep v1.0.1 on PhysioNet](https://physionet.org/content/bidsleep-dataset/1.0.1/), with wrist-worn heart-rate and accelerometer data and EEG-based sleep-stage labels.
 
-The test dataset remains reserved for final evaluation.
+- **47 participants**, **253 nights**, and **205,013 labeled 30-second epochs**.
+- Participant-separated splits (seed 42): **139,780 train**, **25,676 validation**, and **39,557 test epochs**.
+- Heart-rate and motion signals are summarized per epoch, with rolling statistics and heart-rate change features added.
+- No participants are shared across the training, validation, and test splits.
 
-## Next Steps
+Small examples of the original sensor files are in [data/sample of the original data](data/sample%20of%20the%20original%20data/).
 
-- Improve model performance and evaluate on unseen test participants.
-- Connect the wearable sensors and collect live measurements.
-- Integrate the trained model into a working proof of concept.
+## Model and Results
+
+The selected model is a **time-aware causal Temporal Convolutional Network (TCN)**. It uses **18 features** (17 heart-rate/movement features plus elapsed recording time), with up to **120 past epochs / 60 minutes** of context to predict the current 30-second sleep stage. Causal windows avoid using future measurements.
+
+| Evaluation | Accuracy | Macro F1 | Evaluated epochs |
+|---|---:|---:|---:|
+| Validation | **67.58%** | **0.6678** | 23,851 |
+| Held-out test | **66.69%** | **0.6689** | 37,802 |
+
+Test results come from [11_Model_Evaluation.ipynb](notebooks/11_Model_Evaluation.ipynb). The test set contains more epochs overall; only eligible sequence endpoints are evaluated.
+
+![Test confusion matrix](results/Test%20Confusion%20Matrix.png)
+
+The saved model and its required preprocessing artifacts are in [models/](models/):
+- `sleep_tcn_120x18_elapsed_best.keras` — trained Keras model
+- `scaler_tcn_18.pkl` — fitted feature scaler
+- `features_tcn_18.pkl` — ordered feature list
+
+## Hardware and Android Prototype
+
+The hardware prototype uses an **Arduino Nano 33 IoT**, its built-in accelerometer, and a **MAX30102 optical pulse sensor**. The [Arduino firmware](arduino%20firmware/SleepMonitorNano.ino) reads accelerometer and optical sensor data, derives beat-interval measurements, and sends samples over **Bluetooth Low Energy (BLE)**.
+
+An Android demonstration build is provided as [SleepMonitor-0.4-live-waveforms.apk](SleepMonitor-0.4-live-waveforms.apk). The repository includes the APK, but not the Android app's source code.
+
+![Sleep Monitor hardware setup](hardware/Sleep%20monitor%20setup%20with%20compact%20power%20bank.png)
+
+[View sensor power/wiring setup](hardware/MAX30102%20to%20Nano%2033%20IoT%20power%20setup.png)
+
+## Repository Contents
+
+| Path | Contents |
+|---|---|
+| [notebooks/](notebooks/) | Data cleaning, EDA, baseline models, feature engineering, GRU/TCN experiments, final evaluation |
+| [data/](data/) | Participant-split CSVs and raw-data samples |
+| [models/](models/) | Trained TCN, scaler, and feature list |
+| [arduino firmware/](arduino%20firmware/) | Nano 33 IoT sensor and BLE sketch |
+| [hardware/](hardware/) | Prototype and power-connection images |
+| [results/](results/) | Validation and test confusion matrices |
+| [Android APK](SleepMonitor-0.4-live-waveforms.apk) | Demonstration app build |
+
+## Limitations and Next Steps
+
+- Wrist-worn heart-rate and motion signals cannot capture all the information available in a PSG study; sleep-stage transitions and variation between people remain challenging.
+- **Offline test accuracy does not establish real-world accuracy for the Arduino/Android prototype**. The model still needs evaluation on data recorded by this hardware.
+- Some model notebooks refer to `train_temporal.csv` and `val_temporal.csv`, which are not currently included in the repository; regenerate or supply those prepared features before rerunning them. Notebook file paths may need adjustment.
+- Future work includes end-to-end hardware validation, robustness testing, app source-code documentation, and a reproducible dependency/setup file.
 
 ## Technologies
 
-Python · Pandas · NumPy · Scikit-learn · Keras · TensorFlow · Matplotlib · JupyterLab
+Python · Pandas · NumPy · scikit-learn · TensorFlow/Keras · JupyterLab · Arduino/C++ · BLE · Android
 
-## Dataset
-
-[BIDSleep — PhysioNet](https://physionet.org/content/bidsleep-dataset/1.0.1/)
-
-The repository includes processing notebooks, model experiments, processed datasets, and a small sample of the original recordings.
+**Disclaimer:** This project is for educational and personal sleep-awareness purposes only. It is not a medical device.
