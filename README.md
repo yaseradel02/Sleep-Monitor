@@ -57,6 +57,10 @@ An Android demonstration build is provided as [SleepMonitor-0.4-live-waveforms.a
 
 [View sensor power/wiring setup](hardware/MAX30102%20to%20Nano%2033%20IoT%20power%20setup.png)
 
+## Demo Video
+
+[Watch the Sleep Monitor demo on Google Drive](https://drive.google.com/file/d/1WbwdhTOrRISBCzSwyqnllDM8S_HqMgR3/view?usp=sharing) for a walkthrough of the hardware setup and Android prototype.
+
 ## Repository Contents
 
 | Path | Contents |
